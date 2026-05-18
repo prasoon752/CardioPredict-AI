@@ -1,0 +1,24 @@
+# CardioPredict AI — Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core web framework
+flask==3.0.3
+flask-cors==4.0.1
+
+# Production WSGI server
+gunicorn==22.0.0
+
+# ML + data
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.5.1
+joblib==1.4.2
+
+# Deep Learning (comment out if using only sklearn .pkl model)
+tensorflow==2.16.1
+
+# SHAP explainability
+shap==0.45.1
+
+# Utilities
+python-dotenv==1.0.1

@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CardioPredict AI</title>
+
+<!--
+  ╔══════════════════════════════════════════════════════════════════════╗
+  ║  CardioPredict AI — Frontend                                        ║
+  ║  All AI calls go to YOUR Flask backend (/predict)                   ║
+  ║  No external AI API keys required.                                  ║
+  ╚══════════════════════════════════════════════════════════════════════╝
+
+  HOW TO SWITCH FROM LOCAL → PRODUCTION:
+  Change BACKEND_URL below from "http://localhost:5000"
+  to your deployed Render URL, e.g.:
+  "https://cardiopredict-backend.onrender.com"
+-->
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0f1e; --bg2: #0e1527; --bg3: #131d35; --card: #111827;
+    --border: rgba(255,255,255,0.08); --accent: #e84040; --accent2: #ff6b6b;
+    --teal: #0fb8a0; --gold: #f0a500; --text: #f0f4ff;
+    --text2: #8b9cc8; --text3: #4a5880;
+    --serif: 'DM Serif Display', Georgia, serif;
+    --sans: 'DM Sans', sans-serif;
+    --radius: 12px;
+  }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 2rem;
+    background: rgba(10,15,30,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .nav-logo span { font-family: var(--serif); font-size: 1.3rem; letter-spacing: -0.02em; }
+  .nav-links { display: flex; gap: 1.5rem; }
+  .nav-links a { color: var(--text2); font-size: 0.875rem; text-decoration: none; cursor: pointer; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta { background: var(--accent); color: #fff; border: none; padding: 0.5rem 1.25rem; border-radius: 6px; font-family: var(--sans); font-size: 0.875rem; font-weight: 500; cursor: pointer; }
+
+  /* HERO */
+  .hero { min-height: 85vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 4rem 2rem; position: relative; overflow: hidden; }
+  .hero-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 80% 50% at 50% 30%, rgba(232,64,64,0.12) 0%, transparent 70%); pointer-events: none; }
+  .hero-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(232,64,64,0.15); border: 1px solid rgba(232,64,64,0.3); color: var(--accent2); font-size: 0.75rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.35rem 0.9rem; border-radius: 20px; margin-bottom: 1.5rem; }
+  .hero h1 { font-family: var(--serif); font-size: clamp(2.5rem, 6vw, 4.5rem); line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 1.5rem; max-width: 800px; }
+  .hero h1 em { font-style: italic; color: var(--accent2); }
+  .hero p { font-size: 1.1rem; color: var(--text2); max-width: 560px; margin-bottom: 2.5rem; }
+  .hero-btns { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+  .btn-primary { background: var(--accent); color: #fff; border: none; padding: 0.85rem 2rem; border-radius: 8px; font-family: var(--sans); font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+  .btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); padding: 0.85rem 2rem; border-radius: 8px; font-family: var(--sans); font-size: 1rem; cursor: pointer; transition: all 0.2s; }
+
+  /* ECG */
+  .ecg-wrapper { width: 100%; max-width: 700px; margin: 3rem auto 0; opacity: 0.5; }
+  .ecg-line { fill: none; stroke: var(--accent2); stroke-width: 1.5; stroke-dasharray: 1200; stroke-dashoffset: 1200; animation: ecg-draw 3s ease-in-out infinite; }
+  @keyframes ecg-draw { 0% { stroke-dashoffset: 1200; opacity: 1; } 70% { stroke-dashoffset: 0; opacity: 1; } 85% { opacity: 0.5; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+
+  /* STATS */
+  .stats-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1px; background: var(--border); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .stat-cell { background: var(--bg); padding: 1.5rem 2rem; text-align: center; }
+  .stat-cell .num { font-family: var(--serif); font-size: 2.2rem; color: var(--accent2); }
+  .stat-cell .lbl { font-size: 0.8rem; color: var(--text2); margin-top: 0.25rem; }
+
+  /* SECTION */
+  section { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
+  .section-tag { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); margin-bottom: 0.75rem; }
+  .section-title { font-family: var(--serif); font-size: clamp(1.8rem, 3vw, 2.8rem); line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 1rem; }
+  .section-sub { color: var(--text2); max-width: 520px; margin-bottom: 3rem; line-height: 1.7; }
+
+  /* TOOL */
+  .tool-container { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+  .tool-header { padding: 2rem 2.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .tool-header h2 { font-family: var(--serif); font-size: 1.6rem; }
+  .tool-header p { color: var(--text2); font-size: 0.875rem; margin-top: 0.25rem; }
+  .step-indicator { display: flex; gap: 6px; padding-top: 0.25rem; }
+  .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: background 0.2s; }
+  .step-dot.active { background: var(--accent2); }
+  .step-dot.done { background: var(--teal); }
+  .tool-body { padding: 2rem 2.5rem; }
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+  .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 0.8rem; color: var(--text2); font-weight: 500; letter-spacing: 0.02em; }
+  input[type="number"], select { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.9rem; color: var(--text); font-family: var(--sans); font-size: 0.9rem; width: 100%; transition: border-color 0.2s; appearance: none; }
+  input[type="number"]:focus, select:focus { outline: none; border-color: rgba(232,64,64,0.5); }
+  select option { background: #1a2440; }
+  .toggle-group { display: flex; gap: 6px; }
+  .toggle-btn { flex: 1; padding: 0.6rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); font-family: var(--sans); font-size: 0.85rem; cursor: pointer; transition: all 0.15s; }
+  .toggle-btn.active { background: rgba(232,64,64,0.15); border-color: rgba(232,64,64,0.4); color: var(--accent2); font-weight: 500; }
+  .form-footer { margin-top: 2rem; display: flex; align-items: center; justify-content: space-between; padding-top: 1.5rem; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 1rem; }
+  .form-footer .disclaimer { font-size: 0.73rem; color: var(--text3); max-width: 380px; line-height: 1.5; }
+
+  /* RESULTS */
+  .result-wrapper { display: none; }
+  .result-wrapper.show { display: block; }
+  .risk-gauge-wrap { display: flex; flex-direction: column; align-items: center; padding: 2rem 0; gap: 0.5rem; }
+  .risk-label-top { font-size: 0.8rem; color: var(--text2); letter-spacing: 0.06em; text-transform: uppercase; }
+  .gauge-svg { width: 200px; height: 110px; }
+  .risk-level-badge { font-size: 0.8rem; font-weight: 600; padding: 4px 14px; border-radius: 20px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .risk-low { background: rgba(15,184,160,0.15); color: var(--teal); border: 1px solid rgba(15,184,160,0.3); }
+  .risk-moderate { background: rgba(240,165,0,0.15); color: var(--gold); border: 1px solid rgba(240,165,0,0.3); }
+  .risk-high { background: rgba(232,64,64,0.15); color: var(--accent2); border: 1px solid rgba(232,64,64,0.3); }
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 1.5rem; }
+  .result-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
+  .result-card h4 { font-size: 0.78rem; color: var(--text2); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.75rem; }
+  .factor-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .factor-name { font-size: 0.8rem; color: var(--text); width: 110px; flex-shrink: 0; }
+  .factor-bar-bg { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; }
+  .factor-bar-fill { height: 100%; border-radius: 3px; }
+  .factor-val { font-size: 0.75rem; color: var(--text2); width: 32px; text-align: right; flex-shrink: 0; }
+  .ai-insight { grid-column: 1 / -1; }
+  .ai-insight p { font-size: 0.9rem; color: var(--text2); line-height: 1.7; }
+  .ai-insight .typing::after { content: '▋'; animation: blink 0.7s infinite; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+  .recommendations { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  .rec-item { display: flex; align-items: flex-start; gap: 8px; font-size: 0.85rem; color: var(--text2); }
+  .rec-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); flex-shrink: 0; margin-top: 7px; }
+
+  /* LOADING */
+  .loading-state { display: none; flex-direction: column; align-items: center; gap: 1rem; padding: 3rem 1rem; color: var(--text2); }
+  .loading-state.show { display: flex; }
+  .spinner { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(232,64,64,0.2); border-top-color: var(--accent2); animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ERROR */
+  .error-box { background: rgba(232,64,64,0.08); border: 1px solid rgba(232,64,64,0.25); border-radius: 8px; padding: 1rem 1.25rem; margin-top: 1rem; display: none; }
+  .error-box.show { display: block; }
+  .error-box p { font-size: 0.85rem; color: var(--accent2); line-height: 1.6; }
+
+  /* MODEL CARDS */
+  .models-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+  .model-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; position: relative; overflow: hidden; }
+  .model-card.featured { border-color: rgba(232,64,64,0.4); }
+  .model-card.featured::before { content: 'Active'; position: absolute; top: 12px; right: 12px; background: rgba(232,64,64,0.2); color: var(--accent2); font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+  .model-name { font-size: 0.8rem; color: var(--text2); margin-bottom: 0.5rem; }
+  .model-title { font-family: var(--serif); font-size: 1.2rem; margin-bottom: 1.25rem; }
+  .model-metric { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+  .metric-label { font-size: 0.78rem; color: var(--text2); }
+  .metric-val { font-size: 0.9rem; font-weight: 600; }
+  .metric-bar { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-bottom: 0.75rem; }
+  .metric-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+
+  /* STEPS */
+  .steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 2rem; }
+  .step-item { display: flex; flex-direction: column; gap: 0.75rem; }
+  .step-num { font-family: var(--serif); font-size: 2.5rem; color: rgba(232,64,64,0.3); line-height: 1; }
+  .step-item h3 { font-size: 1rem; font-weight: 500; }
+  .step-item p { font-size: 0.85rem; color: var(--text2); line-height: 1.6; }
+
+  /* FEATURES */
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+  .feature-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
+  .feature-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; font-size: 1.1rem; }
+  .feature-card h3 { font-size: 0.95rem; font-weight: 500; margin-bottom: 0.5rem; }
+  .feature-card p { font-size: 0.83rem; color: var(--text2); line-height: 1.6; }
+
+  footer { border-top: 1px solid var(--border); padding: 2.5rem 2rem; text-align: center; color: var(--text3); font-size: 0.8rem; line-height: 1.7; }
+
+  @media (max-width: 640px) {
+    .form-grid, .result-grid { grid-template-columns: 1fr; }
+    .tool-header { flex-direction: column; }
+    .tool-body { padding: 1.25rem; }
+    nav .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     BACKEND URL CONFIG
+     Change this ONE line to switch between local and production.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<script>
+  // ── LOCAL development:
+  // const BACKEND_URL = "http://localhost:5000";
+
+  // ── After deploying to Render, replace with your actual URL:
+  // const BACKEND_URL = "https://cardiopredict-backend.onrender.com";
+
+  const BACKEND_URL = "http://localhost:5000";  // <-- CHANGE THIS LINE ONLY
+</script>
+
+<nav>
+  <div class="nav-logo" onclick="scrollTo(0,0)">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <path d="M14 24s-9-5.5-9-12a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 6.5-9 12-9 12z" fill="#e84040"/>
+      <polyline points="4,14 7,14 9,10 12,18 15,12 17,16 20,14 24,14" stroke="#fff" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>CardioPredict</span>
+  </div>
+  <div class="nav-links">
+    <a onclick="scrollToSection('tool')">Risk Tool</a>
+    <a onclick="scrollToSection('models')">Models</a>
+    <a onclick="scrollToSection('how')">How It Works</a>
+  </div>
+  <button class="nav-cta" onclick="scrollToSection('tool')">Get My Risk Score</button>
+</nav>
+
+<div class="hero" id="home">
+  <div class="hero-bg"></div>
+  <div class="hero-badge">
+    <span style="width:6px;height:6px;border-radius:50%;background:var(--accent2);display:inline-block;"></span>
+    Self-Hosted · No External API · Your Own ML Model
+  </div>
+  <h1>Predict Your <em>Cardiovascular</em> Risk Before It's Too Late</h1>
+  <p>A clinical-grade deep neural network combining genetic, lifestyle, and clinical markers — running entirely on your own trained model.</p>
+  <div class="hero-btns">
+    <button class="btn-primary" onclick="scrollToSection('tool')">Assess My Risk Now</button>
+    <button class="btn-secondary" onclick="scrollToSection('how')">How It Works</button>
+  </div>
+  <div class="ecg-wrapper">
+    <svg viewBox="0 0 700 60" preserveAspectRatio="none">
+      <path class="ecg-line" d="M0,30 L60,30 L80,10 L85,50 L90,5 L95,55 L100,30 L130,30 L150,22 L155,38 L160,30 L200,30 L220,10 L225,50 L230,5 L235,55 L240,30 L270,30 L290,22 L295,38 L300,30 L340,30 L360,10 L365,50 L370,5 L375,55 L380,30 L410,30 L430,22 L435,38 L440,30 L480,30 L500,10 L505,50 L510,5 L515,55 L520,30 L560,30 L580,22 L585,38 L590,30 L700,30"/>
+    </svg>
+  </div>
+</div>
+
+<div class="stats-strip">
+  <div class="stat-cell"><div class="num">93%</div><div class="lbl">DNN Accuracy</div></div>
+  <div class="stat-cell"><div class="num">0.95</div><div class="lbl">ROC-AUC Score</div></div>
+  <div class="stat-cell"><div class="num">14</div><div class="lbl">Clinical Features</div></div>
+  <div class="stat-cell"><div class="num">4K+</div><div class="lbl">Patient Records</div></div>
+  <div class="stat-cell"><div class="num">31%</div><div class="lbl">Global CVD Deaths</div></div>
+</div>
+
+<!-- ══════════════════════════════════════ TOOL ══════════════════════════ -->
+<section id="tool">
+  <div class="section-tag">Your ML Model · Self-Hosted</div>
+  <h2 class="section-title">Personalized Risk Assessment</h2>
+  <p class="section-sub">Enter your clinical and lifestyle details. Your prediction runs on your trained deep neural network — no external APIs.</p>
+
+  <div class="tool-container">
+    <div class="tool-header">
+      <div>
+        <h2>Cardiovascular Risk Calculator</h2>
+        <p>Powered by your trained model (Flask backend) · For educational use only</p>
+      </div>
+      <div class="step-indicator">
+        <div class="step-dot active" id="dot0"></div>
+        <div class="step-dot" id="dot1"></div>
+        <div class="step-dot" id="dot2"></div>
+      </div>
+    </div>
+    <div class="tool-body" id="toolBody">
+
+      <!-- STEP 0 -->
+      <div id="step0">
+        <p style="font-size:0.8rem;color:var(--text2);font-weight:500;letter-spacing:0.04em;margin-bottom:1.25rem;">STEP 1 OF 3 — Clinical Measurements</p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Age (years)</label>
+            <input type="number" id="age" placeholder="e.g. 52" min="18" max="90" />
+          </div>
+          <div class="form-group">
+            <label>Sex at Birth</label>
+            <div class="toggle-group">
+              <button class="toggle-btn" id="sexM" onclick="setToggle('sex','M','sexM','sexF')">Male</button>
+              <button class="toggle-btn" id="sexF" onclick="setToggle('sex','F','sexF','sexM')">Female</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Systolic BP (mmHg)</label>
+            <input type="number" id="sysBP" placeholder="e.g. 135" min="80" max="250" />
+          </div>
+          <div class="form-group">
+            <label>Diastolic BP (mmHg)</label>
+            <input type="number" id="diaBP" placeholder="e.g. 85" min="50" max="150" />
+          </div>
+          <div class="form-group">
+            <label>Total Cholesterol Level</label>
+            <select id="cholesterol">
+              <option value="">Select level</option>
+              <option value="1">Normal (&lt;200 mg/dL)</option>
+              <option value="2">Borderline (200–239 mg/dL)</option>
+              <option value="3">High (≥240 mg/dL)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fasting Glucose (mg/dL)</label>
+            <input type="number" id="glucose" placeholder="e.g. 95" min="50" max="400" />
+          </div>
+        </div>
+        <div class="form-footer">
+          <p class="disclaimer">Data is sent only to your own Flask backend. Nothing is stored.</p>
+          <button class="btn-primary" onclick="goStep(1)">Continue →</button>
+        </div>
+      </div>
+
+      <!-- STEP 1 -->
+      <div id="step1" style="display:none;">
+        <p style="font-size:0.8rem;color:var(--text2);font-weight:500;letter-spacing:0.04em;margin-bottom:1.25rem;">STEP 2 OF 3 — Lifestyle & Body Metrics</p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>BMI (kg/m²)</label>
+            <input type="number" id="bmi" placeholder="e.g. 26.5" min="12" max="55" step="0.1" />
+          </div>
+          <div class="form-group">
+            <label>Smoking Status</label>
+            <div class="toggle-group">
+              <button class="toggle-btn" id="smokY" onclick="setToggle('smoking','1','smokY','smokN')">Smoker</button>
+              <button class="toggle-btn" id="smokN" onclick="setToggle('smoking','0','smokN','smokY')">Non-smoker</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Alcohol Consumption</label>
+            <div class="toggle-group">
+              <button class="toggle-btn" id="alcY" onclick="setToggle('alcohol','1','alcY','alcN')">Yes</button>
+              <button class="toggle-btn" id="alcN" onclick="setToggle('alcohol','0','alcN','alcY')">No</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Physical Activity</label>
+            <div class="toggle-group">
+              <button class="toggle-btn" id="physY" onclick="setToggle('phys','1','physY','physN')">Active</button>
+              <button class="toggle-btn" id="physN" onclick="setToggle('phys','0','physN','physY')">Sedentary</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-footer">
+          <button class="btn-secondary" onclick="goStep(0)">← Back</button>
+          <button class="btn-primary" onclick="goStep(2)">Continue →</button>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div id="step2" style="display:none;">
+        <p style="font-size:0.8rem;color:var(--text2);font-weight:500;letter-spacing:0.04em;margin-bottom:1.25rem;">STEP 3 OF 3 — Genetic Risk Profile</p>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Family History of CVD (Polygenic Risk Proxy)</label>
+            <select id="prs">
+              <option value="">Select family history</option>
+              <option value="low">Low — No known family history of CVD</option>
+              <option value="moderate">Moderate — 1 distant relative with CVD</option>
+              <option value="high">High — Parent or sibling with early-onset CVD</option>
+              <option value="very_high">Very High — Multiple close relatives with CVD</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>Diabetes Status</label>
+            <div class="toggle-group" style="max-width:300px;">
+              <button class="toggle-btn" id="diabY" onclick="setToggle('diabetes','1','diabY','diabN')">Diabetic</button>
+              <button class="toggle-btn" id="diabN" onclick="setToggle('diabetes','0','diabN','diabY')">Non-Diabetic</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:rgba(232,64,64,0.06);border:1px solid rgba(232,64,64,0.15);border-radius:8px;padding:1rem;margin-top:1rem;">
+          <p style="font-size:0.8rem;color:var(--accent2);margin-bottom:0.25rem;font-weight:500;">⚠ Disclaimer</p>
+          <p style="font-size:0.78rem;color:var(--text2);line-height:1.5;">This tool is for educational purposes only. It does not constitute medical advice. Always consult a healthcare professional.</p>
+        </div>
+
+        <div class="form-footer">
+          <button class="btn-secondary" onclick="goStep(1)">← Back</button>
+          <button class="btn-primary" id="analyzeBtn" onclick="analyzeRisk()">Analyze with My Model →</button>
+        </div>
+      </div>
+
+      <!-- LOADING -->
+      <div class="loading-state" id="loadingState">
+        <div class="spinner"></div>
+        <p style="font-size:0.875rem;">Running your ML model…</p>
+        <p style="font-size:0.78rem;color:var(--text3);">Sending data to Flask backend at <span id="backendUrlDisplay"></span></p>
+      </div>
+
+      <!-- ERROR -->
+      <div class="error-box" id="errorBox">
+        <p id="errorMsg"></p>
+        <button class="btn-secondary" style="margin-top:0.75rem;font-size:0.8rem;" onclick="resetTool()">← Try Again</button>
+      </div>
+
+      <!-- RESULTS -->
+      <div class="result-wrapper" id="resultWrapper">
+        <div class="risk-gauge-wrap">
+          <p class="risk-label-top">Your Cardiovascular Risk Score</p>
+          <svg class="gauge-svg" viewBox="0 0 200 110">
+            <defs>
+              <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#0fb8a0"/>
+                <stop offset="50%" stop-color="#f0a500"/>
+                <stop offset="100%" stop-color="#e84040"/>
+              </linearGradient>
+            </defs>
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="14" stroke-linecap="round"/>
+            <path id="gaugeFill" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#gaugeGrad)" stroke-width="14" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3"/>
+            <text x="100" y="90" text-anchor="middle" font-family="DM Serif Display,Georgia,serif" font-size="28" fill="#f0f4ff" id="gaugeNum">–</text>
+          </svg>
+          <span class="risk-level-badge risk-low" id="riskBadge">–</span>
+          <p style="font-size:0.72rem;color:var(--text3);margin-top:0.5rem;" id="modelInfo"></p>
+        </div>
+
+        <div class="result-grid">
+          <div class="result-card">
+            <h4>Top Risk Factors (SHAP / Heuristic)</h4>
+            <div id="shapBars"></div>
+          </div>
+          <div class="result-card">
+            <h4>Clinical Recommendations</h4>
+            <div class="recommendations" id="recommendations"></div>
+          </div>
+          <div class="result-card ai-insight">
+            <h4>Clinical Insight</h4>
+            <p id="aiInsight" class="typing"></p>
+          </div>
+        </div>
+
+        <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap;">
+          <button class="btn-primary" onclick="resetTool()">← Reassess</button>
+          <button class="btn-secondary" onclick="scrollToSection('models')">View Model Details</button>
+        </div>
+      </div>
+
+    </div><!-- /tool-body -->
+  </div><!-- /tool-container -->
+</section>
+
+<!-- ══════════════════════════════════════ MODELS ════════════════════════ -->
+<section id="models" style="border-top:1px solid var(--border);">
+  <div class="section-tag">Model Benchmarks</div>
+  <h2 class="section-title">Four Models, One Winner</h2>
+  <p class="section-sub">Performance comparison from the research paper — your DNN is the active model running all predictions.</p>
+  <div class="models-grid">
+    <div class="model-card">
+      <div class="model-name">Baseline</div>
+      <div class="model-title">Logistic Regression</div>
+      <div class="model-metric"><span class="metric-label">Accuracy</span><span class="metric-val">85%</span></div>
+      <div class="metric-bar"><div class="metric-fill" style="width:85%"></div></div>
+      <div class="model-metric"><span class="metric-label">ROC-AUC</span><span class="metric-val">0.88</span></div>
+      <div class="metric-bar"><div class="metric-fill" style="width:88%"></div></div>
+    </div>
+    <div class="model-card">
+      <div class="model-name">Ensemble</div>
+      <div class="model-title">Random Forest</div>
+      <div class="model-metric"><span class="metric-label">Accuracy</span><span class="metric-val">89%</span></div>
+      <div class="metric-bar"><div class="metric-fill" style="width:89%"></div></div>
+      <div class="model-metric"><span class="metric-label">ROC-AUC</span><span class="metric-val">0.91</span></div>
+      <div class="metric-bar"><div class="metric-fill" style="width:91%"></div></div>
+    </div>
+    <div class="model-card">
+      <div class="model-name">Gradient Boosting</div>
+      <div class="model-title">XGBoost</div>
+      <div class="model-metric"><span class="metric-label">Accuracy</span><span class="metric-val">91%</span></div>
+      <div class="metric-bar"><div class="metric-fill" style="width:91%"></div></div>
+      <div class="model-metric"><span class="metric-label">ROC-AUC</span><span class="metric-val">0.93</span></div>
+      <div class="metric-bar"><div class="metric-fill" style="width:93%"></div></div>
+    </div>
+    <div class="model-card featured">
+      <div class="model-name">Deep Learning · Active</div>
+      <div class="model-title">Neural Network (DNN)</div>
+      <div class="model-metric"><span class="metric-label">Accuracy</span><span class="metric-val" style="color:var(--accent2)">93%</span></div>
+      <div class="metric-bar"><div class="metric-fill" style="width:93%;background:var(--accent2)"></div></div>
+      <div class="model-metric"><span class="metric-label">ROC-AUC</span><span class="metric-val" style="color:var(--accent2)">0.95</span></div>
+      <div class="metric-bar"><div class="metric-fill" style="width:95%;background:var(--accent2)"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════ HOW IT WORKS ══════════════════ -->
+<section id="how" style="border-top:1px solid var(--border);">
+  <div class="section-tag">Architecture</div>
+  <h2 class="section-title">Full-Stack Data Flow</h2>
+  <p class="section-sub">From form submission to prediction — everything runs on your infrastructure.</p>
+  <div class="steps-grid">
+    <div class="step-item"><div class="step-num">01</div><h3>Form Input</h3><p>User fills in 14 clinical, lifestyle, and genetic fields in the browser.</p></div>
+    <div class="step-item"><div class="step-num">02</div><h3>JSON POST</h3><p>Frontend sends a <code>fetch()</code> to your Flask backend at <code>/predict</code>.</p></div>
+    <div class="step-item"><div class="step-num">03</div><h3>Feature Engineering</h3><p>Backend builds derived features (BP category, lifestyle index) and applies your scaler.</p></div>
+    <div class="step-item"><div class="step-num">04</div><h3>Model Inference</h3><p>Your trained <code>.h5</code> or <code>.pkl</code> model produces a probability score.</p></div>
+    <div class="step-item"><div class="step-num">05</div><h3>SHAP + Output</h3><p>SHAP values, recommendations, and clinical insight are assembled and returned as JSON.</p></div>
+  </div>
+</section>
+
+<footer>
+  <p style="margin-bottom:0.5rem;"><strong style="color:var(--text2);">CardioPredict AI</strong> — Self-Hosted Full-Stack Edition</p>
+  <p>Research by Aniket Kumar Singh, Prasoon Kumar & Ankit Verma · Galgotias University</p>
+  <p style="margin-top:0.75rem;">For educational and research purposes only. Not a substitute for professional medical advice.</p>
+</footer>
+
+<!-- ══════════════════════════════════════ JAVASCRIPT ═══════════════════════
+     This is the ONLY section that changed from the original frontend.
+     The analyzeRisk() function now calls YOUR Flask backend instead of
+     the Anthropic API.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<script>
+  document.getElementById('backendUrlDisplay').textContent = BACKEND_URL;
+
+  /* ── state ─────────────────────────────────────────────────────────────── */
+  const formData = { sex: null, smoking: null, alcohol: null, phys: null, diabetes: null };
+
+  function scrollToSection(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function setToggle(key, val, activeId, inactiveId) {
+    formData[key] = val;
+    document.getElementById(activeId).classList.add('active');
+    document.getElementById(inactiveId).classList.remove('active');
+  }
+
+  function goStep(n) {
+    [0, 1, 2].forEach(i => {
+      document.getElementById('step' + i).style.display = (i === n) ? 'block' : 'none';
+      const dot = document.getElementById('dot' + i);
+      dot.className = 'step-dot' + (i < n ? ' done' : i === n ? ' active' : '');
+    });
+  }
+
+  function resetTool() {
+    document.getElementById('resultWrapper').classList.remove('show');
+    document.getElementById('errorBox').classList.remove('show');
+    document.getElementById('loadingState').classList.remove('show');
+    goStep(0);
+    document.getElementById('step0').style.display = 'block';
+    ['age', 'sysBP', 'diaBP', 'glucose', 'bmi'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    ['cholesterol', 'prs'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.selectedIndex = 0;
+    });
+    ['sexM','sexF','smokY','smokN','alcY','alcN','physY','physN','diabY','diabN']
+      .forEach(id => document.getElementById(id)?.classList.remove('active'));
+    Object.keys(formData).forEach(k => formData[k] = null);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     analyzeRisk()
+     ─────────────────────────────────────────────────────────────────────
+     THIS IS THE KEY CHANGE:
+     Instead of calling the Anthropic API, we POST to YOUR Flask backend.
+
+     Old (external API):
+       fetch("https://api.anthropic.com/v1/messages", { ... })
+
+     New (your backend):
+       fetch(`${BACKEND_URL}/predict`, { ... })
+     ══════════════════════════════════════════════════════════════════════ */
+  async function analyzeRisk() {
+    const age         = document.getElementById('age').value;
+    const sysBP       = document.getElementById('sysBP').value;
+    const cholesterol = document.getElementById('cholesterol').value;
+    const bmi         = document.getElementById('bmi').value;
+    const prs         = document.getElementById('prs').value;
+
+    if (!age || !sysBP || !cholesterol || !bmi || !prs) {
+      alert('Please fill in all required fields before analyzing.');
+      return;
+    }
+
+    /* Hide form steps, show loading */
+    [0, 1, 2].forEach(i => document.getElementById('step' + i).style.display = 'none');
+    document.getElementById('resultWrapper').classList.remove('show');
+    document.getElementById('errorBox').classList.remove('show');
+    document.getElementById('loadingState').classList.add('show');
+
+    /* Build payload — field names match what app.py expects */
+    const payload = {
+      age:              parseInt(age),
+      sex:              formData.sex || 'M',
+      systolicBP:       parseInt(sysBP),
+      diastolicBP:      parseInt(document.getElementById('diaBP').value || '80'),
+      cholesterol:      parseInt(cholesterol),
+      glucose:          parseInt(document.getElementById('glucose').value || '90'),
+      bmi:              parseFloat(bmi),
+      smoking:          formData.smoking === '1' ? 1 : 0,
+      alcohol:          formData.alcohol === '1' ? 1 : 0,
+      physicalActivity: formData.phys    === '1' ? 1 : 0,
+      diabetes:         formData.diabetes=== '1' ? 1 : 0,
+      prs:              prs
+    };
+
+    try {
+      /* ── The actual fetch call to your Flask backend ─────────────────── */
+      const response = await fetch(`${BACKEND_URL}/predict`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Server returned ${response.status}`);
+      }
+
+      const result = await response.json();
+      displayResults(result);
+
+    } catch (err) {
+      document.getElementById('loadingState').classList.remove('show');
+      document.getElementById('errorBox').classList.add('show');
+      document.getElementById('errorMsg').innerHTML =
+        `<strong>Connection failed:</strong> ${err.message}<br><br>` +
+        `Make sure your Flask backend is running at <code>${BACKEND_URL}</code>.<br>` +
+        `Run: <code>cd backend && python app.py</code>`;
+    }
+  }
+
+  /* ── Render results ─────────────────────────────────────────────────── */
+  function displayResults(result) {
+    document.getElementById('loadingState').classList.remove('show');
+
+    /* Gauge animation */
+    const score = result.riskScore;
+    document.getElementById('gaugeNum').textContent = score;
+    const offset = 251.3 * (1 - score / 100);
+    const fill = document.getElementById('gaugeFill');
+    fill.style.strokeDashoffset = '251.3';
+    setTimeout(() => {
+      fill.style.transition = 'stroke-dashoffset 1.2s ease';
+      fill.style.strokeDashoffset = offset;
+    }, 100);
+
+    /* Badge */
+    const badge = document.getElementById('riskBadge');
+    badge.textContent = result.riskLevel + ' Risk';
+    badge.className = 'risk-level-badge';
+    if      (result.riskLevel === 'Low')      badge.classList.add('risk-low');
+    else if (result.riskLevel === 'Moderate') badge.classList.add('risk-moderate');
+    else                                       badge.classList.add('risk-high');
+
+    /* Model info line */
+    document.getElementById('modelInfo').textContent =
+      `Model: ${result.modelUsed === 'trained_model' ? 'Your trained DNN' : 'Rule-based fallback'} · ` +
+      `SHAP: ${result.shapUsed ? 'enabled' : 'heuristic'} · ` +
+      `P(CVD) = ${(result.probability * 100).toFixed(1)}%`;
+
+    /* SHAP bars */
+    const shapBars = document.getElementById('shapBars');
+    shapBars.innerHTML = '';
+    (result.shapFactors || []).slice(0, 5).forEach(f => {
+      const color = f.direction === 'increases' ? '#e84040' : '#0fb8a0';
+      const pct   = Math.round(Math.min(1, f.impact) * 100);
+      shapBars.innerHTML += `
+        <div class="factor-bar-row">
+          <span class="factor-name">${f.name}</span>
+          <div class="factor-bar-bg"><div class="factor-bar-fill" style="width:${pct}%;background:${color};"></div></div>
+          <span class="factor-val" style="color:${color};">${pct}%</span>
+        </div>`;
+    });
+
+    /* Recommendations */
+    const recs = document.getElementById('recommendations');
+    recs.innerHTML = '';
+    (result.recommendations || []).forEach(r => {
+      recs.innerHTML += `<div class="rec-item"><div class="rec-dot"></div><span>${r}</span></div>`;
+    });
+
+    /* Typed clinical insight */
+    const insight = document.getElementById('aiInsight');
+    insight.className = 'typing';
+    insight.textContent = '';
+    const text = result.clinicalInsight || '';
+    let i = 0;
+    const type = () => {
+      if (i < text.length) { insight.textContent += text[i++]; setTimeout(type, 14); }
+      else { insight.className = ''; }
+    };
+    type();
+
+    document.getElementById('resultWrapper').classList.add('show');
+    setTimeout(() => document.getElementById('resultWrapper').scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+  }
+</script>
+
+</body>
+</html>

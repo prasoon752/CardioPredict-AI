@@ -1,0 +1,23 @@
+# render.yaml — Render.com deployment config
+# Place this in your project ROOT on GitHub
+# Render reads it automatically when you connect your repo
+
+services:
+  - type: web
+    name: cardiopredict-backend
+    runtime: python
+    # FIX: rootDir must point to where app.py actually lives
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 2 --bind 0.0.0.0:$PORT --timeout 120
+    envVars:
+      - key: MODEL_PATH
+        value: model/cardio_model.h5
+      - key: SCALER_PATH
+        value: model/scaler.pkl
+      - key: FLASK_DEBUG
+        value: false
+      - key: ALLOWED_ORIGINS
+        value: "*"
+    healthCheckPath: /health
+    autoDeploy: true

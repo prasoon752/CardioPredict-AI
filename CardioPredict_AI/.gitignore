@@ -1,0 +1,36 @@
+# ── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# ── Model files (too large for GitHub — upload separately) ──────────────────
+backend/model/*.h5
+backend/model/*.keras
+backend/model/*.pkl
+backend/model/*.joblib
+
+# Keep the model folder structure
+!backend/model/.gitkeep
+
+# ── Environment variables ────────────────────────────────────────────────────
+.env
+.env.local
+.env.production
+
+# ── IDE / OS ─────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
